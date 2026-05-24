@@ -48,7 +48,10 @@ app.use(helmet({
   crossOriginResourcePolicy: false
 }));
 app.use(cors({
-  origin: true, // Allow any origin for now to prevent CORS issues
+  origin: (origin, callback) => {
+    // Allow all origins
+    callback(null, true);
+  },
   credentials: true
 }));
 app.use(cookieParser());

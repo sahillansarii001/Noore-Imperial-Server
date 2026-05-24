@@ -28,10 +28,11 @@ export const register = async (req, res, next) => {
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
+    const isProd = env.NODE_ENV?.trim() === 'production';
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -50,9 +51,12 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const cleanEmail = email?.trim();
+    console.log(`[LOGIN ATTEMPT] Email received: "${email}", Cleaned: "${cleanEmail}"`);
 
-    const { rows } = await pool.query('SELECT id, name, email, role, is_verified, password_hash FROM users WHERE email = $1', [email]);
+    const { rows } = await pool.query('SELECT id, name, email, role, is_verified, password_hash FROM users WHERE email = $1', [cleanEmail]);
     if (rows.length === 0) {
+      console.log(`[LOGIN FAILED] User not found for email: "${cleanEmail}"`);
       return error(res, 'Invalid email or password', 401);
     }
 
@@ -60,32 +64,38 @@ export const login = async (req, res, next) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
+      console.log(`[LOGIN FAILED] Password mismatch for email: "${cleanEmail}"`);
       return error(res, 'Invalid email or password', 401);
     }
 
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
+    const isProd = env.NODE_ENV?.trim() === 'production';
+    console.log(`[LOGIN SUCCESS] Issuing cookies (secure: ${isProd}, sameSite: ${isProd ? 'none' : 'lax'})`);
+
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     delete user.password_hash;
     return success(res, { user, accessToken }, 'Login successful');
   } catch (err) {
+    console.error('[LOGIN ERROR]', err);
     next(err);
   }
 };
 
 export const logout = async (req, res, next) => {
   try {
+    const isProd = env.NODE_ENV?.trim() === 'production';
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax'
     });
     return success(res, null, 'Logged out successfully');
   } catch (err) {
@@ -96,13 +106,19 @@ export const logout = async (req, res, next) => {
 export const refreshToken = async (req, res, next) => {
   try {
     const token = req.cookies.refreshToken;
-    if (!token) return error(res, 'No refresh token provided', 401);
+    console.log(`[REFRESH TOKEN] Token received: ${!!token}`);
+    
+    if (!token) {
+      console.log(`[REFRESH TOKEN FAILED] No token in cookies. Request headers:`, req.headers.cookie);
+      return error(res, 'No refresh token provided', 401);
+    }
 
     const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
     const accessToken = generateAccessToken(decoded.id);
 
     return success(res, { accessToken }, 'Token refreshed');
   } catch (err) {
+    console.log(`[REFRESH TOKEN ERROR]:`, err.message);
     return error(res, 'Invalid or expired refresh token', 401);
   }
 };

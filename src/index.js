@@ -62,7 +62,10 @@ consultationNamespace.on('connection', (socket) => {
 const seedAdminUser = async () => {
   const email = process.env.ADMIN_EMAIL;
   const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password) return;
+  if (!email || !password) {
+    console.log('Skipping admin seed: ADMIN_EMAIL or ADMIN_PASSWORD not provided');
+    return;
+  }
 
   try {
     const bcrypt = await import('bcrypt');
@@ -70,9 +73,9 @@ const seedAdminUser = async () => {
     await (await import('./config/db.js')).pool.query(`
       INSERT INTO users (id, name, email, password_hash, role, is_verified)
       VALUES (gen_random_uuid(), 'System Admin', $1, $2, 'admin', true)
-      ON CONFLICT (email) DO NOTHING
+      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
     `, [email, hashedPassword]);
-    console.log('Admin user verified/seeded.');
+    console.log('Admin user verified/seeded. Password updated if necessary.');
   } catch (err) {
     console.error('Admin seed error:', err.message);
   }
