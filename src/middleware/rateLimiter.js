@@ -10,6 +10,7 @@ export const authLimiter = rateLimit({
   },
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 // 300 requests per 15 minutes for general API routes
@@ -22,4 +23,5 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });

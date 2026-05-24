@@ -39,6 +39,10 @@ import analyticsRoutes from './routes/analytics.routes.js';
 
 const app = express();
 
+// Trust the first proxy (required for Render, Railway, Heroku, etc.)
+// This allows express-rate-limit to correctly read the client IP from X-Forwarded-For
+app.set('trust proxy', 1);
+
 // Security & Utility Middlewares
 app.use(helmet());
 app.use(cors({
