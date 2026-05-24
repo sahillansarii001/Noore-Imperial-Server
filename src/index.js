@@ -2,6 +2,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import app from './app.js';
 import { env } from './config/env.js';
+import { initDb } from './config/db.js';
 import jwt from 'jsonwebtoken';
 
 const server = http.createServer(app);
@@ -57,6 +58,7 @@ consultationNamespace.on('connection', (socket) => {
   });
 });
 
-server.listen(env.PORT, () => {
+server.listen(env.PORT, async () => {
   console.log(`Server running on port ${env.PORT}`);
+  await initDb();
 });
