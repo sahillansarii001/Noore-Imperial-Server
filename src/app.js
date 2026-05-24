@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import 'dotenv/config';
 
 import { errorHandler } from './middleware/errorHandler.js';
@@ -44,6 +45,7 @@ app.use(cors({
   origin: true, // Allow any origin for now to prevent CORS issues
   credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
