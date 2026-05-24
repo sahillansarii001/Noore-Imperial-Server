@@ -58,7 +58,28 @@ consultationNamespace.on('connection', (socket) => {
   });
 });
 
+// Auto-seed admin user
+const seedAdminUser = async () => {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) return;
+
+  try {
+    const bcrypt = await import('bcrypt');
+    const hashedPassword = await bcrypt.default.hash(password, 10);
+    await (await import('./config/db.js')).pool.query(`
+      INSERT INTO users (id, name, email, password_hash, role, is_verified)
+      VALUES (gen_random_uuid(), 'System Admin', $1, $2, 'admin', true)
+      ON CONFLICT (email) DO NOTHING
+    `, [email, hashedPassword]);
+    console.log('Admin user verified/seeded.');
+  } catch (err) {
+    console.error('Admin seed error:', err.message);
+  }
+};
+
 server.listen(env.PORT, async () => {
   console.log(`Server running on port ${env.PORT}`);
   await initDb();
+  await seedAdminUser();
 });
