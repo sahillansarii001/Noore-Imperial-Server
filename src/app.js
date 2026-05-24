@@ -44,7 +44,9 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security & Utility Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false
+}));
 app.use(cors({
   origin: true, // Allow any origin for now to prevent CORS issues
   credentials: true
